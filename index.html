@@ -3,320 +3,70 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>BizTrack Pro — Team Owed Integration</title>
-  <!-- Chart.js CDN -->
+  <title>BizTrack Pro — Owed Balance Management</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <!-- Supabase JS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
-      --bg: #0a0c12;
-      --card: #11151f;
-      --card-hover: #1a1f2c;
-      --border: #252e3f;
-      --text: #eef2ff;
-      --text-dim: #95a5c6;
-      --accent: #3b82f6;
-      --accent-glow: rgba(59,130,246,0.2);
-      --success: #10b981;
-      --danger: #ef4444;
-      --warning: #f59e0b;
-      --purple: #8b5cf6;
-      --pink: #ec4899;
-      --cyan: #06b6d4;
+      --bg: #0a0c12; --card: #11151f; --card-hover: #1a1f2c; --border: #252e3f;
+      --text: #eef2ff; --text-dim: #95a5c6; --accent: #3b82f6; --accent-glow: rgba(59,130,246,0.2);
+      --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --purple: #8b5cf6; --cyan: #06b6d4;
     }
-
-    body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.5;
-    }
-
-    .app {
-      display: flex;
-      min-height: 100vh;
-    }
-
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
+    .app { display: flex; min-height: 100vh; }
     .sidebar {
-      width: 280px;
-      background: var(--card);
-      border-right: 1px solid var(--border);
-      padding: 28px 20px;
-      position: fixed;
-      height: 100vh;
-      overflow-y: auto;
-      z-index: 100;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+      width: 280px; background: var(--card); border-right: 1px solid var(--border);
+      padding: 28px 20px; position: fixed; height: 100vh; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 8px;
     }
-
-    .logo {
-      font-size: 1.5rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, var(--accent), var(--purple), var(--cyan));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin-bottom: 4px;
-    }
-
-    .logo-sub {
-      font-size: 0.7rem;
-      color: var(--text-dim);
-      margin-bottom: 28px;
-      letter-spacing: 0.3px;
-    }
-
+    .logo { font-size: 1.5rem; font-weight: 800; background: linear-gradient(135deg, var(--accent), var(--purple), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .logo-sub { font-size: 0.7rem; color: var(--text-dim); margin-bottom: 28px; }
     .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 12px 16px;
-      border-radius: 14px;
-      background: transparent;
-      border: none;
-      color: var(--text-dim);
-      font-weight: 500;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: all 0.2s;
-      width: 100%;
-      text-align: left;
+      display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 14px;
+      background: transparent; border: none; color: var(--text-dim); font-weight: 500;
+      cursor: pointer; width: 100%; text-align: left;
     }
-
-    .nav-item:hover {
-      background: var(--card-hover);
-      color: var(--text);
-    }
-
-    .nav-item.active {
-      background: var(--accent-glow);
-      color: var(--accent);
-      border-left: 3px solid var(--accent);
-    }
-
-    .nav-badge {
-      margin-left: auto;
-      background: var(--danger);
-      color: white;
-      font-size: 0.65rem;
-      padding: 2px 8px;
-      border-radius: 30px;
-      font-weight: 700;
-    }
-
-    .sidebar-footer {
-      margin-top: auto;
-      padding-top: 24px;
-      font-size: 0.7rem;
-      color: var(--text-dim);
-      border-top: 1px solid var(--border);
-    }
-
-    .sync-dot {
-      width: 8px;
-      height: 8px;
-      background: var(--danger);
-      border-radius: 50%;
-      display: inline-block;
-    }
-
-    .sync-dot.online {
-      background: var(--success);
-      box-shadow: 0 0 8px var(--success);
-    }
-
-    .main {
-      margin-left: 280px;
-      flex: 1;
-      padding: 28px 32px;
-      max-width: calc(100vw - 280px);
-    }
-
-    .view {
-      animation: fadeIn 0.25s ease;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(6px);}
-      to { opacity: 1; transform: translateY(0);}
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 28px;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-
-    h1 {
-      font-size: 1.8rem;
-      font-weight: 700;
-      background: linear-gradient(to right, #fff, var(--accent));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 24px;
-      padding: 20px 24px;
-      margin-bottom: 24px;
-      transition: all 0.2s;
-    }
-
-    .card-title {
-      font-size: 1.1rem;
-      font-weight: 700;
-      margin-bottom: 18px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      border-left: 3px solid var(--accent);
-      padding-left: 12px;
-    }
-
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-      gap: 18px;
-      margin-bottom: 28px;
-    }
-
-    .kpi {
-      background: var(--card);
-      border-radius: 20px;
-      padding: 20px;
-      border: 1px solid var(--border);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .kpi::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-    }
-
+    .nav-item:hover { background: var(--card-hover); color: var(--text); }
+    .nav-item.active { background: var(--accent-glow); color: var(--accent); border-left: 3px solid var(--accent); }
+    .sidebar-footer { margin-top: auto; padding-top: 24px; font-size: 0.7rem; color: var(--text-dim); border-top: 1px solid var(--border); }
+    .sync-dot { width: 8px; height: 8px; background: var(--danger); border-radius: 50%; display: inline-block; }
+    .sync-dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); }
+    .main { margin-left: 280px; flex: 1; padding: 28px 32px; max-width: calc(100vw - 280px); }
+    .view { animation: fadeIn 0.25s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: translateY(0);} }
+    .hidden { display: none !important; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+    h1 { font-size: 1.8rem; font-weight: 700; background: linear-gradient(to right, #fff, var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 24px; padding: 20px 24px; margin-bottom: 24px; }
+    .card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; border-left: 3px solid var(--accent); padding-left: 12px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 18px; margin-bottom: 28px; }
+    .kpi { background: var(--card); border-radius: 20px; padding: 20px; border: 1px solid var(--border); position: relative; overflow: hidden; }
+    .kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
     .kpi.revenue::before { background: var(--success); }
     .kpi.expense::before { background: var(--danger); }
-    .kpi.profit::before { background: var(--accent); }
     .kpi-label { font-size: 0.7rem; text-transform: uppercase; color: var(--text-dim); letter-spacing: 1px; }
     .kpi-value { font-size: 1.9rem; font-weight: 800; font-family: monospace; margin-top: 6px; }
-
     .btn {
-      padding: 8px 18px;
-      border-radius: 40px;
-      border: none;
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 0.8rem;
-      transition: 0.1s linear;
-      background: var(--card-hover);
-      color: var(--text);
+      padding: 8px 18px; border-radius: 40px; border: none; font-weight: 600; cursor: pointer;
+      font-size: 0.8rem; background: var(--card-hover); color: var(--text);
     }
-
     .btn-primary { background: var(--accent); color: white; }
     .btn-success { background: var(--success); color: white; }
     .btn-danger { background: var(--danger); color: white; }
-    .btn-outline { border: 1px solid var(--border); background: transparent; }
-
-    .person-tabs {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 24px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 12px;
-    }
-    .person-tab {
-      padding: 8px 20px;
-      border-radius: 40px;
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--text-dim);
-      cursor: pointer;
-      transition: 0.2s;
-    }
-    .person-tab.active {
-      background: var(--accent);
-      color: white;
-      border-color: var(--accent);
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.8rem;
-    }
-    th, td {
-      padding: 12px 8px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-    }
+    .btn-warning { background: var(--warning); color: white; }
+    .person-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+    .person-tab { padding: 8px 20px; border-radius: 40px; background: transparent; border: 1px solid var(--border); color: var(--text-dim); cursor: pointer; }
+    .person-tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    th, td { padding: 12px 8px; text-align: left; border-bottom: 1px solid var(--border); }
     .amount-pos { color: var(--success); font-weight: 700; }
     .amount-neg { color: var(--danger); font-weight: 700; }
-    .badge {
-      display: inline-block;
-      padding: 2px 10px;
-      border-radius: 30px;
-      font-size: 0.7rem;
-      font-weight: 600;
-    }
-    .badge-green { background: rgba(16,185,129,0.2); color: #2ecc71; }
-    .badge-red { background: rgba(239,68,68,0.2); color: #f87171; }
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px,1fr));
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-    input, select, textarea {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      padding: 10px 14px;
-      border-radius: 14px;
-      color: var(--text);
-      width: 100%;
-    }
-    .chart-container {
-      max-height: 280px;
-      margin: 20px 0;
-    }
-    canvas { max-height: 260px; width: 100%; }
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: #1f2937;
-      backdrop-filter: blur(12px);
-      padding: 12px 20px;
-      border-radius: 50px;
-      color: white;
-      z-index: 2000;
-      transition: 0.2s;
-      opacity: 0;
-      transform: translateY(30px);
-    }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 16px; margin-bottom: 20px; }
+    input, select, textarea { background: var(--bg); border: 1px solid var(--border); padding: 10px 14px; border-radius: 14px; color: var(--text); width: 100%; }
+    .toast { position: fixed; bottom: 24px; right: 24px; background: #1f2937; backdrop-filter: blur(12px); padding: 12px 20px; border-radius: 50px; color: white; z-index: 2000; transition: 0.2s; opacity: 0; transform: translateY(30px); }
     .toast.show { opacity: 1; transform: translateY(0);}
     .owed-highlight { color: var(--warning); font-weight: 700; }
-    .total-owed { font-size: 1.4rem; font-weight: 800; color: var(--warning); }
     @media (max-width: 800px) { .sidebar { width: 100%; position: relative; height: auto; } .main { margin-left: 0; max-width: 100%; padding: 20px; } }
   </style>
 </head>
@@ -324,58 +74,73 @@
 <div class="app">
   <aside class="sidebar">
     <div class="logo">💰 BizTrack Pro</div>
-    <div class="logo-sub">team owed • p&l • investments</div>
+    <div class="logo-sub">owed balance manager</div>
     <button class="nav-item active" onclick="showView('dashboard')"><span>📊</span> Dashboard</button>
-    <button class="nav-item" onclick="showView('pnl')"><span>📉</span> P&L Statement</button>
+    <button class="nav-item" onclick="showView('monthly')"><span>📅</span> Monthly Tracker</button>
     <button class="nav-item" onclick="showView('peopleHub')"><span>👥</span> People Hub</button>
-    <button class="nav-item" onclick="showView('investments')"><span>💎</span> Investments</button>
-    <button class="nav-item" onclick="showView('budget')"><span>🎯</span> Budget vs Actual</button>
-    <button class="nav-item" onclick="showView('settings')"><span>⚙️</span> Sync & Data</button>
+    <button class="nav-item" onclick="showView('settings')"><span>⚙️</span> Settings</button>
     <div class="sidebar-footer">
       <div class="sync-status"><span class="sync-dot" id="syncIndicator"></span> <span id="syncText">Local Mode</span></div>
-      <div style="margin-top: 10px;">🔐 Exact owed balances pre-loaded</div>
     </div>
   </aside>
 
   <main class="main">
-    <!-- DASHBOARD VIEW -->
+    <!-- DASHBOARD -->
     <div id="dashboardView" class="view">
-      <div class="header"><h1>🏆 Command Center</h1><button class="btn btn-primary" onclick="quickAddModal()">+ Quick Transaction</button></div>
+      <div class="header"><h1>🏆 Dashboard</h1><button class="btn btn-primary" onclick="quickAddModal()">+ Quick Transaction</button></div>
       <div class="kpi-grid" id="dashKpis"></div>
-      <div class="card"><div class="card-title">📊 6-Month Revenue vs Expenses</div><div class="chart-container"><canvas id="trendChart"></canvas></div></div>
-      <div class="card"><div class="card-title">💰 Owed Balances (Exact Data)</div><div id="owedPreview"></div></div>
+      <div class="card"><div class="card-title">💰 Current Owed Balances</div><div id="owedPreview"></div></div>
     </div>
 
-    <!-- P&L VIEW -->
-    <div id="pnlView" class="view hidden">
-      <div class="header"><h1>📃 Profit & Loss Statement</h1><button class="btn btn-outline" onclick="exportPnlCSV()">📎 Export CSV</button></div>
-      <div class="card">
-        <div class="card-title">📅 Month Selector</div>
-        <select id="pnlMonthSelect" class="btn-outline" style="padding: 8px;" onchange="renderPnL()"></select>
+    <!-- MONTHLY TRACKER -->
+    <div id="monthlyView" class="view hidden">
+      <div class="header"><h1>📅 Monthly Tracker</h1></div>
+      <div class="month-bar"><label>Month:</label><select id="monthSelect" onchange="renderMonthly()"></select></div>
+      
+      <div class="card"><div class="card-title">➕ Add Transaction</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Type</label><select id="txType"><option value="expense">📤 Expense (Someone Paid)</option><option value="repayment">💰 Repayment (Company Paid Back)</option><option value="income">📥 Income</option></select></div>
+          <div class="form-group"><label>Person</label><select id="txPerson"></select></div>
+          <div class="form-group"><label>Description</label><input type="text" id="txDesc" placeholder="Description"></div>
+          <div class="form-group"><label>Amount ($)</label><input type="number" id="txAmount" placeholder="0.00" step="0.01"></div>
+          <div class="form-group"><label>Category</label><select id="txCategory"><option value="auto">Auto</option><option value="vip">VIP</option><option value="gold">Gold</option><option value="ai">AI Credits</option><option value="software">Software</option><option value="other">Other</option></select></div>
+          <div class="form-group"><label>Date</label><input type="date" id="txDate"></div>
+        </div>
+        <div class="btn-group"><button class="btn btn-success" onclick="addTransaction()">Add Transaction</button></div>
       </div>
-      <div class="card"><div class="card-title">💸 Income Statement</div><div id="pnlTable"></div></div>
+
+      <div class="card"><div class="card-title">📋 Recent Transactions</div>
+        <div class="table-wrap"><table><thead><tr><th>Date</th><th>Type</th><th>Person</th><th>Description</th><th>Amount</th><th>Effect on Owed</th></tr></thead><tbody id="txTable"></tbody></table></div>
+      </div>
     </div>
 
-    <!-- PEOPLE HUB with individual owed breakdown -->
+    <!-- PEOPLE HUB -->
     <div id="peopleHubView" class="view hidden">
-      <div class="header"><h1>👥 Team & Individual Owed</h1><button class="btn btn-primary" onclick="openAddPersonModal()">+ Add Member</button></div>
-      <div class="card">
-        <div class="person-tabs" id="personTabsContainer"></div>
-        <div id="selectedPersonDashboard"></div>
-        <canvas id="personPnLChart" style="max-height: 240px; margin-top: 20px;"></canvas>
+      <div class="header"><h1>👥 People & Owed Balances</h1><button class="btn btn-primary" onclick="openAddPersonModal()">+ Add Person</button></div>
+      <div class="card"><div class="card-title">Team Members</div><div id="peopleList"></div></div>
+      <div class="card"><div class="card-title">💰 Adjust Owed Balance</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Person</label><select id="adjustPerson"></select></div>
+          <div class="form-group"><label>Reason</label><input type="text" id="adjustReason" placeholder="e.g., Reimbursement, Bonus"></div>
+          <div class="form-group"><label>Amount ($)</label><input type="number" id="adjustAmount" placeholder="0.00" step="0.01"></div>
+          <div class="form-group"><label>Action</label><select id="adjustAction"><option value="add">➕ Company Owes Them (Add to owed)</option><option value="deduct">➖ Company Paid Them (Remove from owed)</option></select></div>
+        </div>
+        <button class="btn btn-primary" onclick="adjustOwedBalance()">Update Balance</button>
       </div>
     </div>
-
-    <!-- INVESTMENTS -->
-    <div id="investmentsView" class="view hidden"><div class="card"><div class="card-title">🚀 Capital Table</div><div id="investGrid"></div><div class="form-grid" style="margin-top:20px;"><input type="text" id="invPersonSelect" placeholder="Person ID"><input type="number" id="invAmount" placeholder="Amount"><select id="invType"><option value="investment">💰 Investment</option><option value="return">📤 Return</option></select><button class="btn btn-success" onclick="addInvestment()">Record</button></div><div id="investList"></div></div></div>
-
-    <!-- BUDGET -->
-    <div id="budgetView" class="view hidden"><div class="card"><div class="card-title">📌 Category Budgets</div><div id="budgetTable"></div><button class="btn btn-primary" onclick="saveBudgets()">Save Budgets</button></div></div>
 
     <!-- SETTINGS -->
     <div id="settingsView" class="view hidden">
-      <div class="card"><div class="card-title">🔌 Supabase Connect</div><input type="text" id="supabaseUrlInput" placeholder="https://yourproject.supabase.co" style="margin-bottom: 12px;"><input type="password" id="supabaseKeyInput" placeholder="anon key"><button class="btn btn-primary" onclick="initSupabaseConnection()" style="margin-top: 12px;">Connect & Sync</button><button class="btn btn-danger" onclick="disconnectSupabase()">Reset Local</button><div id="syncStatusMsg" class="card" style="margin-top: 16px;"></div>
-      <div class="card"><div class="card-title">💾 Import/Export</div><button class="btn" onclick="exportLocalData()">Export JSON</button><input type="file" id="importFile" accept=".json" style="margin-top: 8px;" onchange="importData(this)"></div>
+      <div class="card"><div class="card-title">🔌 Supabase Connect</div>
+        <input type="text" id="supabaseUrlInput" placeholder="https://yourproject.supabase.co" style="margin-bottom: 12px;">
+        <input type="password" id="supabaseKeyInput" placeholder="anon key">
+        <button class="btn btn-primary" onclick="initSupabaseConnection()" style="margin-top: 12px;">Connect & Sync</button>
+        <button class="btn btn-danger" onclick="disconnectSupabase()">Disconnect</button>
+      </div>
+      <div class="card"><div class="card-title">💾 Data Management</div>
+        <button class="btn" onclick="exportLocalData()">Export JSON</button>
+        <input type="file" id="importFile" accept=".json" style="margin-top: 8px;" onchange="importData(this)">
+        <button class="btn btn-danger" onclick="resetAllData()" style="margin-left: 8px;">Reset All Data</button>
       </div>
     </div>
   </main>
@@ -383,35 +148,12 @@
 <div id="toastMsg" class="toast"></div>
 
 <script>
-  // ============================================
-  // EXACT OWED BALANCES (from your data)
-  // Me: $400 (Auto $200 + Gold $100 + VIP $74 + AI $26)
-  // Taha: $174 (Auto $100 + VIP $74)
-  // Antonis: $224 (Auto $100 + VIP $74 + Gold $50)
-  // Grand Total: $798
-  // ============================================
-  
   let supabaseClient = null;
-  let currentPersonId = null;
-  let trendChart = null, personChart = null;
-  
   let localState = {
     people: [
-      { id: "p1", name: "Me (You)", role: "Founder", type: "team" },
+      { id: "p1", name: "Sacha", role: "Founder", type: "team" },
       { id: "p2", name: "Taha", role: "Partner", type: "team" },
       { id: "p3", name: "Antonis", role: "Partner", type: "team" }
-    ],
-    transactions: [
-      { id: "t1", month_key: "2026-04", type: "expense", description: "Auto Expense", amount: 200, category: "auto", date: "2026-04-10", payer_id: "p1" },
-      { id: "t2", month_key: "2026-04", type: "expense", description: "Gold Standard", amount: 100, category: "gold", date: "2026-04-12", payer_id: "p1" },
-      { id: "t3", month_key: "2026-04", type: "expense", description: "VIP Service", amount: 74, category: "vip", date: "2026-04-15", payer_id: "p1" },
-      { id: "t4", month_key: "2026-04", type: "expense", description: "AI Credits", amount: 26, category: "ai", date: "2026-04-18", payer_id: "p1" },
-      { id: "t5", month_key: "2026-04", type: "expense", description: "Auto Expense", amount: 100, category: "auto", date: "2026-04-10", payer_id: "p2" },
-      { id: "t6", month_key: "2026-04", type: "expense", description: "VIP Service", amount: 74, category: "vip", date: "2026-04-15", payer_id: "p2" },
-      { id: "t7", month_key: "2026-04", type: "expense", description: "Auto Expense", amount: 100, category: "auto", date: "2026-04-10", payer_id: "p3" },
-      { id: "t8", month_key: "2026-04", type: "expense", description: "VIP Service", amount: 74, category: "vip", date: "2026-04-15", payer_id: "p3" },
-      { id: "t9", month_key: "2026-04", type: "expense", description: "Gold Standard", amount: 50, category: "gold", date: "2026-04-12", payer_id: "p3" },
-      { id: "t10", month_key: "2026-04", type: "income", description: "Client Payment", amount: 5000, category: "salary", date: "2026-04-20", payer_id: null }
     ],
     owedEntries: [
       { id: "o1", person_id: "p1", source: "Auto Expense", amount: 200, date: "2026-04-10" },
@@ -420,12 +162,16 @@
       { id: "o4", person_id: "p1", source: "AI Credits", amount: 26, date: "2026-04-18" },
       { id: "o5", person_id: "p2", source: "Auto Expense", amount: 100, date: "2026-04-10" },
       { id: "o6", person_id: "p2", source: "VIP Service", amount: 74, date: "2026-04-15" },
-      { id: "o7", person_id: "p3", source: "Auto Expense", amount: 100, date: "2026-04-10" },
-      { id: "o8", person_id: "p3", source: "VIP Service", amount: 74, date: "2026-04-15" },
-      { id: "o9", person_id: "p3", source: "Gold Standard", amount: 50, date: "2026-04-12" }
+      { id: "o7", person_id: "p2", source: "Rebate", amount: -40, date: "2026-04-20" },
+      { id: "o8", person_id: "p3", source: "Auto Expense", amount: 100, date: "2026-04-10" },
+      { id: "o9", person_id: "p3", source: "VIP Service", amount: 74, date: "2026-04-15" },
+      { id: "o10", person_id: "p3", source: "Gold Standard", amount: 50, date: "2026-04-12" }
     ],
-    investments: [],
-    budgets: { software: 500, marketing: 1000, salary: 5000, office: 800, auto: 300, vip: 200, gold: 200, ai: 100, other: 500 }
+    transactions: [
+      { id: "t1", date: "2026-04-10", type: "expense", person_id: "p1", description: "Auto Expense", amount: 200, category: "auto" },
+      { id: "t2", date: "2026-04-12", type: "expense", person_id: "p1", description: "Gold Standard", amount: 100, category: "gold" },
+      { id: "t3", date: "2026-04-15", type: "expense", person_id: "p2", description: "VIP Service", amount: 74, category: "vip" }
+    ]
   };
 
   function showToast(msg, isError = false) { 
@@ -446,84 +192,109 @@
     localState.people.forEach(p => { total += getOwedTotal(p.id); });
     return total;
   }
-  
-  function getTotalRevenue() { return localState.transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0); }
-  function getTotalExpense() { return localState.transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0); }
-  function getNetProfit() { return getTotalRevenue() - getTotalExpense(); }
 
-  // Supabase connection
-  async function initSupabaseConnection() {
-    const url = document.getElementById('supabaseUrlInput').value.trim();
-    const key = document.getElementById('supabaseKeyInput').value.trim();
-    if (!url || !key) { showToast('Enter URL and anon key', true); return; }
-    try {
-      const { createClient } = supabase;
-      const client = createClient(url, key);
-      const { error } = await client.from('people').select('count');
-      if (error) throw error;
-      supabaseClient = client;
-      localStorage.setItem('sb_url', url);
-      localStorage.setItem('sb_key', key);
-      await syncAllFromSupabase();
-      document.getElementById('syncStatusMsg').innerHTML = '<span style="color:var(--success)">✅ Connected & Synced</span>';
-      document.getElementById('syncIndicator').classList.add('online');
-      document.getElementById('syncText').innerText = 'Live Sync';
-      showToast('Supabase connected!');
-    } catch (e) { showToast('Connection failed: ' + e.message, true); supabaseClient = null; }
-  }
-  
-  async function syncAllFromSupabase() {
-    if (!supabaseClient) return;
-    const { data: people } = await supabaseClient.from('people').select('*');
-    if (people && people.length) localState.people = people;
-    const { data: txns } = await supabaseClient.from('transactions').select('*');
-    if (txns) localState.transactions = txns;
-    const { data: owed } = await supabaseClient.from('owed_entries').select('*');
-    if (owed) localState.owedEntries = owed;
-    const { data: invs } = await supabaseClient.from('investments').select('*');
-    if (invs) localState.investments = invs;
+  function addTransaction() {
+    const type = document.getElementById('txType').value;
+    const personId = document.getElementById('txPerson').value;
+    const desc = document.getElementById('txDesc').value.trim();
+    const amount = parseFloat(document.getElementById('txAmount').value);
+    const category = document.getElementById('txCategory').value;
+    const date = document.getElementById('txDate').value || new Date().toISOString().slice(0, 10);
+    
+    if (!personId || !desc || isNaN(amount) || amount <= 0) {
+      showToast('Please fill all fields correctly', true);
+      return;
+    }
+    
+    const newTx = { id: Date.now() + '', date, type, person_id: personId, description: desc, amount, category };
+    localState.transactions.push(newTx);
+    
+    // Update owed balances based on transaction type
+    if (type === 'expense') {
+      // Expense paid by person → Company owes them (ADD to owed)
+      localState.owedEntries.push({
+        id: Date.now() + '_owed',
+        person_id: personId,
+        source: desc,
+        amount: amount,
+        date: date
+      });
+      showToast(`✅ Added $${amount} to ${getPersonName(personId)}'s owed balance`);
+    } else if (type === 'repayment') {
+      // Company paid person back → REDUCE owed balance
+      localState.owedEntries.push({
+        id: Date.now() + '_repay',
+        person_id: personId,
+        source: `Repayment: ${desc}`,
+        amount: -amount,
+        date: date
+      });
+      showToast(`💰 Paid $${amount} to ${getPersonName(personId)} - owed balance reduced`);
+    } else if (type === 'income') {
+      showToast(`📥 Income recorded: $${amount}`);
+    }
+    
+    // Clear form
+    document.getElementById('txDesc').value = '';
+    document.getElementById('txAmount').value = '';
+    
     renderAllViews();
+    if (supabaseClient) syncToSupabase();
   }
   
-  function disconnectSupabase() { 
-    supabaseClient = null; 
-    localStorage.removeItem('sb_url'); 
-    localStorage.removeItem('sb_key'); 
-    document.getElementById('syncIndicator').classList.remove('online'); 
-    document.getElementById('syncText').innerText = 'Local Mode'; 
-    showToast('Disconnected'); 
-    renderAllViews(); 
+  function adjustOwedBalance() {
+    const personId = document.getElementById('adjustPerson').value;
+    const reason = document.getElementById('adjustReason').value.trim();
+    const amount = parseFloat(document.getElementById('adjustAmount').value);
+    const action = document.getElementById('adjustAction').value;
+    
+    if (!personId || !reason || isNaN(amount) || amount <= 0) {
+      showToast('Please fill all fields', true);
+      return;
+    }
+    
+    const finalAmount = action === 'add' ? amount : -amount;
+    
+    localState.owedEntries.push({
+      id: Date.now() + '_adj',
+      person_id: personId,
+      source: reason,
+      amount: finalAmount,
+      date: new Date().toISOString().slice(0, 10)
+    });
+    
+    localState.transactions.push({
+      id: Date.now() + '_tx',
+      date: new Date().toISOString().slice(0, 10),
+      type: action === 'add' ? 'expense' : 'repayment',
+      person_id: personId,
+      description: reason,
+      amount: amount,
+      category: 'adjustment'
+    });
+    
+    showToast(`${action === 'add' ? 'Added' : 'Removed'} $${amount} ${action === 'add' ? 'to' : 'from'} ${getPersonName(personId)}'s balance`);
+    
+    document.getElementById('adjustReason').value = '';
+    document.getElementById('adjustAmount').value = '';
+    
+    renderAllViews();
+    if (supabaseClient) syncToSupabase();
   }
-
-  // DASHBOARD
+  
+  function getPersonName(id) {
+    let p = localState.people.find(x => x.id === id);
+    return p ? p.name : 'Unknown';
+  }
+  
   function renderDashboard() {
-    const rev = getTotalRevenue(), exp = getTotalExpense(), profit = rev - exp;
     const totalOwed = getTotalOwedAll();
     document.getElementById('dashKpis').innerHTML = `
-      <div class="kpi revenue"><div class="kpi-label">Total Revenue</div><div class="kpi-value">${formatUSD(rev)}</div></div>
-      <div class="kpi expense"><div class="kpi-label">Total Expenses</div><div class="kpi-value">${formatUSD(exp)}</div></div>
-      <div class="kpi profit"><div class="kpi-label">Net Profit</div><div class="kpi-value">${formatUSD(profit)}</div></div>
       <div class="kpi"><div class="kpi-label">💰 Total Owed to Team</div><div class="kpi-value total-owed">${formatUSD(totalOwed)}</div></div>
+      <div class="kpi"><div class="kpi-label">👥 Team Members</div><div class="kpi-value">${localState.people.length}</div></div>
     `;
     
-    // Chart
-    const monthMap = new Map();
-    localState.transactions.forEach(t => {
-      let m = t.month_key; if (!m) return;
-      if (!monthMap.has(m)) monthMap.set(m, { rev: 0, exp: 0 });
-      let d = monthMap.get(m);
-      if (t.type === 'income') d.rev += t.amount;
-      else d.exp += t.amount;
-    });
-    const sortedMonths = [...monthMap.keys()].sort().slice(-6);
-    const revArr = [], expArr = [], labels = [];
-    sortedMonths.forEach(m => { labels.push(m); revArr.push(monthMap.get(m).rev); expArr.push(monthMap.get(m).exp); });
-    if (trendChart) trendChart.destroy();
-    const ctx = document.getElementById('trendChart').getContext('2d');
-    trendChart = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Revenue', data: revArr, backgroundColor: '#10b981' }, { label: 'Expenses', data: expArr, backgroundColor: '#ef4444' }] }, options: { responsive: true, maintainAspectRatio: true } });
-    
-    // Owed preview with exact breakdown
-    let owedHtml = `<div style="margin-bottom:12px; padding:8px; background:rgba(245,158,11,0.1); border-radius:16px;"><strong>Grand Total Owed: ${formatUSD(totalOwed)}</strong></div>`;
+    let owedHtml = `<div style="margin-bottom:12px; padding:8px; background:rgba(245,158,11,0.1); border-radius:16px;"><strong>Grand Total: ${formatUSD(totalOwed)}</strong></div>`;
     localState.people.forEach(p => {
       let bal = getOwedTotal(p.id);
       let breakdown = localState.owedEntries.filter(e => e.person_id === p.id).map(e => `${e.source}: ${formatUSD(e.amount)}`).join(', ');
@@ -535,130 +306,95 @@
     document.getElementById('owedPreview').innerHTML = owedHtml;
   }
   
-  // P&L
-  function renderPnL() {
-    const monthSelect = document.getElementById('pnlMonthSelect');
-    const monthsSet = [...new Set(localState.transactions.map(t => t.month_key).filter(Boolean))].sort();
-    monthSelect.innerHTML = monthsSet.map(m => `<option value="${m}">${m}</option>`).join('');
-    if (monthsSet.length === 0) { document.getElementById('pnlTable').innerHTML = '<div>No data</div>'; return; }
-    const selected = monthSelect.value || monthsSet[0];
-    const monthTx = localState.transactions.filter(t => t.month_key === selected);
-    const income = monthTx.filter(t => t.type === 'income');
-    const expenses = monthTx.filter(t => t.type === 'expense');
-    let incSum = 0, expSum = 0;
-    let html = `<h3>${selected} Summary</h3><table><thead><tr><th>Type</th><th>Description</th><th>Category</th><th>Amount</th></tr></thead><tbody>`;
-    income.forEach(i => { incSum += i.amount; html += `<tr><td>📥 Income</td><td>${i.description}</td><td>${i.category}</td><td class="amount-pos">${formatUSD(i.amount)}</td></tr>`; });
-    expenses.forEach(e => { expSum += e.amount; html += `<tr><td>📤 Expense</td><td>${e.description}</td><td>${e.category}</td><td class="amount-neg">${formatUSD(e.amount)}</td></tr>`; });
-    html += `<tr style="border-top:2px solid var(--border);"><td colspan="3"><strong>Net Profit</strong></td><td><strong>${formatUSD(incSum - expSum)}</strong></td></tr></tbody></table>`;
-    document.getElementById('pnlTable').innerHTML = html;
-  }
-  
-  // PEOPLE HUB
-  function renderPeopleHub() {
-    const container = document.getElementById('personTabsContainer');
-    container.innerHTML = localState.people.map(p => `<button class="person-tab ${currentPersonId === p.id ? 'active' : ''}" onclick="selectPerson('${p.id}')">👤 ${p.name}</button>`).join('');
-    if (!currentPersonId && localState.people.length) currentPersonId = localState.people[0].id;
-    if (currentPersonId) displayPersonDashboard(currentPersonId);
-  }
-  
-  function displayPersonDashboard(personId) {
-    const person = localState.people.find(p => p.id === personId);
-    if (!person) return;
-    const personOwedEntries = localState.owedEntries.filter(e => e.person_id === personId);
-    const totalOwed = personOwedEntries.reduce((s, e) => s + e.amount, 0);
-    const personTx = localState.transactions.filter(t => t.payer_id === personId);
-    const expensesPaid = personTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  function renderMonthly() {
+    // Populate month selector
+    const months = [...new Set(localState.transactions.map(t => t.date.substring(0, 7)))].sort().reverse();
+    const monthSelect = document.getElementById('monthSelect');
+    monthSelect.innerHTML = months.map(m => `<option value="${m}">${m}</option>`).join('');
+    if (months.length === 0) monthSelect.innerHTML = '<option>No data</option>';
     
-    let breakdownHtml = `<div style="margin-top:12px; background: rgba(59,130,246,0.1); padding: 12px; border-radius: 16px;">
-      <strong>📋 Owed Breakdown:</strong><br>`;
-    personOwedEntries.forEach(e => { breakdownHtml += `• ${e.source}: ${formatUSD(e.amount)}<br>`; });
-    breakdownHtml += `<hr><strong>Total owed to ${person.name}: ${formatUSD(totalOwed)}</strong></div>`;
+    // Populate person selector
+    const personSelect = document.getElementById('txPerson');
+    personSelect.innerHTML = localState.people.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
     
-    const html = `<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px;">
-      <div class="kpi"><div class="kpi-label">Expenses Paid</div><div class="kpi-value">${formatUSD(expensesPaid)}</div></div>
-      <div class="kpi"><div class="kpi-label">💰 Owed by Company</div><div class="kpi-value owed-highlight">${formatUSD(totalOwed)}</div></div>
-      <div class="kpi"><div class="kpi-label">Transactions</div><div class="kpi-value">${personOwedEntries.length}</div></div>
-    </div>${breakdownHtml}`;
-    document.getElementById('selectedPersonDashboard').innerHTML = html;
-    
-    // Person P&L Chart
-    const monthMap = new Map();
-    localState.transactions.forEach(t => {
-      if (t.payer_id === personId && t.type === 'expense') {
-        let m = t.month_key; if (!m) return;
-        if (!monthMap.has(m)) monthMap.set(m, 0);
-        monthMap.set(m, monthMap.get(m) + t.amount);
-      }
+    // Show recent transactions
+    let txHtml = '';
+    [...localState.transactions].reverse().slice(0, 20).forEach(t => {
+      let effect = '';
+      if (t.type === 'expense') effect = `➕ Owed +${formatUSD(t.amount)}`;
+      else if (t.type === 'repayment') effect = `➖ Owed -${formatUSD(t.amount)}`;
+      else effect = `📥 Income`;
+      txHtml += `<tr><td>${t.date}</td><td>${t.type === 'expense' ? '📤 Expense' : t.type === 'repayment' ? '💰 Repayment' : '📥 Income'}</td>
+        <td>${getPersonName(t.person_id)}</td><td>${t.description}</td><td class="${t.type === 'expense' ? 'amount-neg' : 'amount-pos'}">${formatUSD(t.amount)}</td>
+        <td>${effect}</td></tr>`;
     });
-    const labels = [...monthMap.keys()].sort();
-    const amounts = labels.map(l => monthMap.get(l));
-    if (personChart) personChart.destroy();
-    const ctx = document.getElementById('personPnLChart').getContext('2d');
-    if (labels.length) {
-      personChart = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: `${person.name} - Monthly Expenses Paid`, data: amounts, backgroundColor: '#f59e0b' }] }, options: { responsive: true } });
-    } else {
-      document.getElementById('personPnLChart').style.display = 'none';
-    }
+    document.getElementById('txTable').innerHTML = txHtml || '<tr><td colspan="6">No transactions yet</td></tr>';
   }
   
-  function selectPerson(id) { currentPersonId = id; renderPeopleHub(); }
-  
-  function renderInvestments() {
-    let totalInv = 0, totalRet = 0;
-    localState.investments.forEach(i => { if (i.type === 'investment') totalInv += i.amount; else totalRet += i.amount; });
-    document.getElementById('investGrid').innerHTML = `<div class="kpi-grid"><div class="kpi"><div>💰 Total Raised</div><div class="kpi-value">${formatUSD(totalInv)}</div></div><div class="kpi"><div>📤 Returns</div><div class="kpi-value">${formatUSD(totalRet)}</div></div><div class="kpi"><div>📈 Net Equity</div><div class="kpi-value">${formatUSD(totalInv - totalRet)}</div></div></div>`;
-    let list = `<table><thead><tr><th>Investor</th><th>Type</th><th>Amount</th><th>Date</th></tr></thead><tbody>`;
-    localState.investments.forEach(i => { list += `<tr><td>${localState.people.find(p => p.id === i.person_id)?.name || i.person_id}</td><td>${i.type}</td><td class="${i.type === 'investment' ? 'amount-pos' : 'amount-neg'}">${formatUSD(i.amount)}</td><td>${i.date}</td></tr>`; });
-    list += `</tbody></table>`;
-    document.getElementById('investList').innerHTML = list;
+  function renderPeopleHub() {
+    const peopleList = document.getElementById('peopleList');
+    let html = '';
+    localState.people.forEach(p => {
+      let bal = getOwedTotal(p.id);
+      html += `<div style="display:flex; justify-content:space-between; align-items:center; padding: 12px 0; border-bottom:1px solid var(--border);">
+        <div><strong>${p.name}</strong> <span style="color:var(--text-dim); font-size:0.75rem;">${p.role}</span></div>
+        <div style="text-align:right"><span class="owed-highlight">${formatUSD(bal)}</span><br>
+        <button class="btn btn-danger btn-sm" style="padding:4px 12px; font-size:0.7rem;" onclick="removePerson('${p.id}')">Remove</button></div>
+      </div>`;
+    });
+    peopleList.innerHTML = html || '<div>No people yet</div>';
+    
+    // Populate adjust person dropdown
+    const adjustPerson = document.getElementById('adjustPerson');
+    adjustPerson.innerHTML = localState.people.map(p => `<option value="${p.id}">${p.name} (${formatUSD(getOwedTotal(p.id))})</option>`).join('');
   }
   
-  async function addInvestment() {
-    let pid = document.getElementById('invPersonSelect').value;
-    let amount = parseFloat(document.getElementById('invAmount').value);
-    let type = document.getElementById('invType').value;
-    if (!pid || isNaN(amount)) { showToast('Invalid', true); return; }
-    const newInv = { id: Date.now() + '', person_id: pid, type, amount, equity: 0, date: new Date().toISOString().slice(0, 10), notes: '' };
-    localState.investments.push(newInv);
-    if (supabaseClient) await supabaseClient.from('investments').insert(newInv);
-    renderInvestments();
-    showToast('Investment recorded');
-  }
-  
-  function renderBudget() {
-    let html = `<div class="form-grid">`;
-    Object.entries(localState.budgets).forEach(([cat, val]) => { html += `<label>${cat}</label><input type="number" id="budget_${cat}" value="${val}">`; });
-    html += `</div>`;
-    document.getElementById('budgetTable').innerHTML = html;
-  }
-  
-  function saveBudgets() {
-    Object.keys(localState.budgets).forEach(cat => { let v = parseFloat(document.getElementById(`budget_${cat}`).value); if (!isNaN(v)) localState.budgets[cat] = v; });
-    showToast('Budgets saved');
-  }
-  
-  function quickAddModal() {
-    let desc = prompt('Description');
-    let amt = parseFloat(prompt('Amount'));
-    let type = confirm('Income? (OK=Income, Cancel=Expense)') ? 'income' : 'expense';
-    if (desc && amt) {
-      let monthKey = new Date().toISOString().slice(0, 7);
-      let tx = { id: Date.now() + '', month_key: monthKey, type, description: desc, amount: amt, category: 'other', date: new Date().toISOString().slice(0, 10), payer_id: null };
-      localState.transactions.push(tx);
-      if (supabaseClient) supabaseClient.from('transactions').insert(tx);
+  function removePerson(id) {
+    if (confirm('Remove this person and all their data?')) {
+      localState.people = localState.people.filter(p => p.id !== id);
+      localState.owedEntries = localState.owedEntries.filter(e => e.person_id !== id);
+      localState.transactions = localState.transactions.filter(t => t.person_id !== id);
       renderAllViews();
-      showToast('Added');
+      showToast('Person removed');
     }
   }
   
-  function exportPnlCSV() {
-    let csv = 'Month,Type,Description,Amount\n';
-    localState.transactions.forEach(t => { csv += `${t.month_key},${t.type},${t.description},${t.amount}\n`; });
-    let blob = new Blob([csv], { type: 'text/csv' });
-    let a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'pnl_export.csv';
-    a.click();
+  function openAddPersonModal() {
+    let name = prompt('Enter name:');
+    let role = prompt('Enter role (e.g., Partner, Investor):');
+    if (name) {
+      let newId = 'p' + Date.now();
+      localState.people.push({ id: newId, name, role: role || 'Team Member', type: 'team' });
+      renderAllViews();
+      showToast(`${name} added`);
+    }
+  }
+  
+  function resetAllData() {
+    if (confirm('Delete ALL data? This cannot be undone!')) {
+      localState = {
+        people: [
+          { id: "p1", name: "Sacha", role: "Founder", type: "team" },
+          { id: "p2", name: "Taha", role: "Partner", type: "team" },
+          { id: "p3", name: "Antonis", role: "Partner", type: "team" }
+        ],
+        owedEntries: [
+          { id: "o1", person_id: "p1", source: "Auto Expense", amount: 200, date: "2026-04-10" },
+          { id: "o2", person_id: "p1", source: "Gold Standard", amount: 100, date: "2026-04-12" },
+          { id: "o3", person_id: "p1", source: "VIP Service", amount: 74, date: "2026-04-15" },
+          { id: "o4", person_id: "p1", source: "AI Credits", amount: 26, date: "2026-04-18" },
+          { id: "o5", person_id: "p2", source: "Auto Expense", amount: 100, date: "2026-04-10" },
+          { id: "o6", person_id: "p2", source: "VIP Service", amount: 74, date: "2026-04-15" },
+          { id: "o7", person_id: "p2", source: "Rebate", amount: -40, date: "2026-04-20" },
+          { id: "o8", person_id: "p3", source: "Auto Expense", amount: 100, date: "2026-04-10" },
+          { id: "o9", person_id: "p3", source: "VIP Service", amount: 74, date: "2026-04-15" },
+          { id: "o10", person_id: "p3", source: "Gold Standard", amount: 50, date: "2026-04-12" }
+        ],
+        transactions: []
+      };
+      renderAllViews();
+      showToast('All data reset');
+    }
   }
   
   function exportLocalData() {
@@ -677,21 +413,76 @@
     reader.onload = e => {
       try {
         let imp = JSON.parse(e.target.result);
-        if (imp.people && imp.transactions) {
-          localState = { ...localState, ...imp };
+        if (imp.people && imp.owedEntries) {
+          localState = imp;
           renderAllViews();
-          showToast('Imported');
+          showToast('Data imported successfully');
         } else throw new Error();
       } catch (err) { showToast('Invalid file', true); }
     };
     reader.readAsText(file);
   }
   
-  function renderAllViews() { renderDashboard(); renderPnL(); renderPeopleHub(); renderInvestments(); renderBudget(); if (currentPersonId) displayPersonDashboard(currentPersonId); }
+  function renderAllViews() { renderDashboard(); renderMonthly(); renderPeopleHub(); }
   function showView(view) { document.querySelectorAll('.view').forEach(v => v.classList.add('hidden')); document.getElementById(view + 'View').classList.remove('hidden'); renderAllViews(); }
   
-  // Load saved supabase credentials
-  (function initLocal() {
+  // Supabase functions
+  async function initSupabaseConnection() {
+    const url = document.getElementById('supabaseUrlInput').value.trim();
+    const key = document.getElementById('supabaseKeyInput').value.trim();
+    if (!url || !key) { showToast('Enter URL and anon key', true); return; }
+    try {
+      const { createClient } = supabase;
+      const client = createClient(url, key);
+      supabaseClient = client;
+      localStorage.setItem('sb_url', url);
+      localStorage.setItem('sb_key', key);
+      document.getElementById('syncIndicator').classList.add('online');
+      document.getElementById('syncText').innerText = 'Live Sync';
+      showToast('Connected to Supabase');
+      await syncToSupabase();
+    } catch (e) { showToast('Connection failed', true); }
+  }
+  
+  async function syncToSupabase() {
+    if (!supabaseClient) return;
+    await supabaseClient.from('people').upsert(localState.people);
+    await supabaseClient.from('owed_entries').upsert(localState.owedEntries);
+    await supabaseClient.from('transactions').upsert(localState.transactions);
+  }
+  
+  function disconnectSupabase() {
+    supabaseClient = null;
+    localStorage.removeItem('sb_url');
+    localStorage.removeItem('sb_key');
+    document.getElementById('syncIndicator').classList.remove('online');
+    document.getElementById('syncText').innerText = 'Local Mode';
+    showToast('Disconnected');
+  }
+  
+  function quickAddModal() {
+    let desc = prompt('Description:');
+    let amt = parseFloat(prompt('Amount:'));
+    let type = prompt('Type: expense (adds to owed), repayment (reduces owed), or income:');
+    let person = prompt('Person (Sacha, Taha, Antonis):');
+    if (desc && amt && type && person) {
+      let personObj = localState.people.find(p => p.name.toLowerCase() === person.toLowerCase());
+      if (!personObj) { showToast('Person not found', true); return; }
+      const newTx = { id: Date.now() + '', date: new Date().toISOString().slice(0, 10), type, person_id: personObj.id, description: desc, amount: amt, category: 'other' };
+      localState.transactions.push(newTx);
+      if (type === 'expense') {
+        localState.owedEntries.push({ id: Date.now() + '_q', person_id: personObj.id, source: desc, amount: amt, date: new Date().toISOString().slice(0, 10) });
+        showToast(`Added $${amt} to ${personObj.name}'s owed`);
+      } else if (type === 'repayment') {
+        localState.owedEntries.push({ id: Date.now() + '_q', person_id: personObj.id, source: `Repayment: ${desc}`, amount: -amt, date: new Date().toISOString().slice(0, 10) });
+        showToast(`Paid $${amt} to ${personObj.name} - owed reduced`);
+      }
+      renderAllViews();
+    }
+  }
+  
+  // Load saved credentials
+  (function init() {
     let savedUrl = localStorage.getItem('sb_url');
     let savedKey = localStorage.getItem('sb_key');
     if (savedUrl && savedKey) {
@@ -700,18 +491,6 @@
     }
     renderAllViews();
   })();
-  
-  window.openAddPersonModal = () => {
-    let name = prompt('Name');
-    let role = prompt('Role');
-    if (name) {
-      let newId = 'p' + Date.now();
-      let newP = { id: newId, name, role, type: 'team' };
-      localState.people.push(newP);
-      if (supabaseClient) supabaseClient.from('people').insert(newP);
-      renderPeopleHub();
-    }
-  };
 </script>
 </body>
 </html>
