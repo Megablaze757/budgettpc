@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>BizTrack Pro — Supabase Studio</title>
+  <!-- Chart.js CDN for beautiful graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Supabase JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #0a0c12;
+      --card: #11151f;
+      --card-hover: #1a1f2c;
+      --border: #252e3f;
+      --text: #eef2ff;
+      --text-dim: #95a5c6;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59,130,246,0.2);
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --purple: #8b5cf6;
+      --pink: #ec4899;
+      --cyan: #06b6d4;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .app {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 280px;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      padding: 28px 20px;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), var(--purple), var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+    }
+
+    .logo-sub {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-bottom: 28px;
+      letter-spacing: 0.3px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 16px;
+      border-radius: 14px;
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-weight: 500;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+      text-align: left;
+    }
+
+    .nav-item:hover {
+      background: var(--card-hover);
+      color: var(--text);
+    }
+
+    .nav-item.active {
+      background: var(--accent-glow);
+      color: var(--accent);
+      border-left: 3px solid var(--accent);
+    }
+
+    .nav-badge {
+      margin-left: auto;
+      background: var(--danger);
+      color: white;
+      font-size: 0.65rem;
+      padding: 2px 8px;
+      border-radius: 30px;
+      font-weight: 700;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 24px;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      border-top: 1px solid var(--border);
+    }
+
+    .sync-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--danger);
+      border-radius: 50%;
+      display: inline-block;
+      box-shadow: 0 0 6px currentColor;
+    }
+
+    .sync-dot.online {
+      background: var(--success);
+    }
+
+    /* MAIN */
+    .main {
+      margin-left: 280px;
+      flex: 1;
+      padding: 28px 32px;
+      max-width: calc(100vw - 280px);
+    }
+
+    .view {
+      animation: fadeIn 0.25s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px);}
+      to { opacity: 1; transform: translateY(0);}
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #fff, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      transition: all 0.2s;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-left: 3px solid var(--accent);
+      padding-left: 12px;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+
+    .kpi {
+      background: var(--card);
+      border-radius: 20px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .kpi::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+
+    .kpi.revenue::before { background: var(--success); }
+    .kpi.expense::before { background: var(--danger); }
+    .kpi.profit::before { background: var(--accent); }
+    .kpi-label { font-size: 0.7rem; text-transform: uppercase; color: var(--text-dim); letter-spacing: 1px; }
+    .kpi-value { font-size: 1.9rem; font-weight: 800; font-family: monospace; margin-top: 6px; }
+
+    .btn {
+      padding: 8px 18px;
+      border-radius: 40px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: 0.1s linear;
+      background: var(--card-hover);
+      color: var(--text);
+    }
+
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-outline { border: 1px solid var(--border); background: transparent; }
+
+    .person-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+    .person-tab {
+      padding: 8px 20px;
+      border-radius: 40px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .person-tab.active {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+    th, td {
+      padding: 12px 8px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .amount-pos { color: var(--success); font-weight: 700; }
+    .amount-neg { color: var(--danger); font-weight: 700; }
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 30px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .badge-green { background: rgba(16,185,129,0.2); color: #2ecc71; }
+    .badge-red { background: rgba(239,68,68,0.2); color: #f87171; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px,1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    input, select, textarea {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      border-radius: 14px;
+      color: var(--text);
+      width: 100%;
+    }
+    .chart-container {
+      max-height: 280px;
+      margin: 20px 0;
+    }
+    canvas { max-height: 260px; width: 100%; }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1f2937;
+      backdrop-filter: blur(12px);
+      padding: 12px 20px;
+      border-radius: 50px;
+      color: white;
+      z-index: 2000;
+      transition: 0.2s;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    .toast.show { opacity: 1; transform: translateY(0);}
+    @media (max-width: 800px) { .sidebar { width: 100%; position: relative; height: auto; } .main { margin-left: 0; max-width: 100%; padding: 20px; } }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo">📊 BizTrack Pro</div>
+    <div class="logo-sub">supabase • live sync</div>
+    <button class="nav-item active" onclick="showView('dashboard')"><span>📈</span> Dashboard</button>
+    <button class="nav-item" onclick="showView('pnl')"><span>📉</span> P&L Statement</button>
+    <button class="nav-item" onclick="showView('peopleHub')"><span>👥</span> People Hub</button>
+    <button class="nav-item" onclick="showView('investments')"><span>💎</span> Investments</button>
+    <button class="nav-item" onclick="showView('budget')"><span>🎯</span> Budget vs Actual</button>
+    <button class="nav-item" onclick="showView('settings')"><span>⚙️</span> Sync & Data</button>
+    <div class="sidebar-footer">
+      <div class="sync-status"><span class="sync-dot" id="syncIndicator"></span> <span id="syncText">Offline</span></div>
+      <div style="margin-top: 10px;">🔐 Real-time P&L</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- DASHBOARD VIEW -->
+    <div id="dashboardView" class="view">
+      <div class="header"><h1>🏆 Command Center</h1><button class="btn btn-primary" onclick="quickAddModal()">+ Quick Transaction</button></div>
+      <div class="kpi-grid" id="dashKpis"></div>
+      <div class="card"><div class="card-title">📊 6-Month Revenue vs Expenses</div><div class="chart-container"><canvas id="trendChart"></canvas></div></div>
+      <div class="card"><div class="card-title">💰 Top 5 Owed Balances</div><div id="owedPreview"></div></div>
+    </div>
+
+    <!-- P&L VIEW with person filter -->
+    <div id="pnlView" class="view hidden">
+      <div class="header"><h1>📃 Profit & Loss Statement</h1><div><button class="btn btn-outline" id="exportPnlBtn" onclick="exportPnlCSV()">📎 Export CSV</button></div></div>
+      <div class="card">
+        <div class="card-title">📅 Month Selector</div>
+        <select id="pnlMonthSelect" class="btn-outline" style="padding: 8px;" onchange="renderPnL()"></select>
+      </div>
+      <div class="card"><div class="card-title">💸 Income Statement</div><div id="pnlTable"></div></div>
+    </div>
+
+    <!-- PEOPLE HUB: individual tabs + private P&L -->
+    <div id="peopleHubView" class="view hidden">
+      <div class="header"><h1>👥 Team & Individual Insights</h1><button class="btn btn-primary" onclick="openAddPersonModal()">+ Add Member</button></div>
+      <div class="card">
+        <div class="person-tabs" id="personTabsContainer"></div>
+        <div id="selectedPersonDashboard"></div>
+        <canvas id="personPnLChart" style="max-height: 240px; margin-top: 20px;"></canvas>
+      </div>
+    </div>
+
+    <!-- INVESTMENTS -->
+    <div id="investmentsView" class="view hidden"><div class="card"><div class="card-title">🚀 Capital Table</div><div id="investGrid"></div><div class="form-grid" style="margin-top:20px;"><input type="text" id="invPersonSelect" placeholder="Person ID (from People Hub)"><input type="number" id="invAmount" placeholder="Amount"><select id="invType"><option value="investment">💰 Investment</option><option value="return">📤 Return</option></select><button class="btn btn-success" onclick="addInvestment()">Record</button></div><div id="investList"></div></div></div>
+
+    <!-- BUDGET -->
+    <div id="budgetView" class="view hidden"><div class="card"><div class="card-title">📌 Category Budgets</div><div id="budgetTable"></div><button class="btn btn-primary" onclick="saveBudgets()">Save Budgets</button></div></div>
+
+    <!-- SETTINGS -->
+    <div id="settingsView" class="view hidden">
+      <div class="card"><div class="card-title">🔌 Supabase Connect</div><input type="text" id="supabaseUrlInput" placeholder="https://yourproject.supabase.co" style="margin-bottom: 12px;"><input type="password" id="supabaseKeyInput" placeholder="anon key"><button class="btn btn-primary" onclick="initSupabaseConnection()" style="margin-top: 12px;">Connect & Sync</button><button class="btn btn-danger" onclick="disconnectSupabase()">Reset Local</button><div id="syncStatusMsg" class="card" style="margin-top: 16px;"></div>
+      <div class="card"><div class="card-title">💾 Import/Export</div><button class="btn" onclick="exportLocalData()">Export JSON</button><input type="file" id="importFile" accept=".json" style="margin-top: 8px;" onchange="importData(this)"></div>
+      </div>
+    </div>
+  </main>
+</div>
+<div id="toastMsg" class="toast"></div>
+
+<script>
+  // ---------- GLOBAL STATE ----------
+  let supabaseClient = null;
+  let currentPersonId = null;
+  let trendChart = null, personChart = null;
+  let localState = {
+    people: [],
+    transactions: [],
+    owedEntries: [],
+    investments: [],
+    budgets: { software:500, marketing:1000, salary:5000, office:800, auto:300, vip:200, gold:200, ai:100, other:500 }
+  };
+
+  // helpers
+  function showToast(msg, isError=false) { let t=document.getElementById('toastMsg'); t.innerText=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2500); }
+  function formatUSD(n) { return '$' + (n||0).toLocaleString(undefined, {minimumFractionDigits:2,maximumFractionDigits:2}); }
+  
+  async function initSupabaseConnection() {
+    const url = document.getElementById('supabaseUrlInput').value.trim();
+    const key = document.getElementById('supabaseKeyInput').value.trim();
+    if (!url || !key) { showToast('Enter URL and anon key', true); return; }
+    try {
+      const { createClient } = supabase;
+      const client = createClient(url, key);
+      const { data, error } = await client.from('people').select('count');
+      if (error) throw error;
+      supabaseClient = client;
+      localStorage.setItem('sb_url', url);
+      localStorage.setItem('sb_key', key);
+      await syncAllFromSupabase();
+      document.getElementById('syncStatusMsg').innerHTML = '<span style="color:var(--success)">✅ Connected & Synced</span>';
+      document.getElementById('syncIndicator').classList.add('online');
+      document.getElementById('syncText').innerText = 'Live Sync';
+      showToast('Supabase connected!');
+    } catch(e) { showToast('Connection failed: '+e.message, true); supabaseClient = null; }
+  }
+  async function syncAllFromSupabase() {
+    if(!supabaseClient) return;
+    const { data: people } = await supabaseClient.from('people').select('*');
+    if(people) localState.people = people;
+    const { data: txns } = await supabaseClient.from('transactions').select('*');
+    if(txns) localState.transactions = txns;
+    const { data: owed } = await supabaseClient.from('owed_entries').select('*');
+    if(owed) localState.owedEntries = owed;
+    const { data: invs } = await supabaseClient.from('investments').select('*');
+    if(invs) localState.investments = invs;
+    const { data: budgetsData } = await supabaseClient.from('budgets').select('*');
+    if(budgetsData && budgetsData.length) { let newBudgets={}; budgetsData.forEach(b=>{newBudgets[b.category]=b.amount;}); localState.budgets={...localState.budgets,...newBudgets}; }
+    renderAllViews();
+  }
+  async function pushTransaction(tx) { if(supabaseClient) await supabaseClient.from('transactions').upsert(tx); }
+  async function pushPerson(p) { if(supabaseClient) await supabaseClient.from('people').upsert(p); }
+  async function pushOwed(oe) { if(supabaseClient) await supabaseClient.from('owed_entries').upsert(oe); }
+  
+  function disconnectSupabase() { supabaseClient = null; localStorage.removeItem('sb_url'); localStorage.removeItem('sb_key'); document.getElementById('syncIndicator').classList.remove('online'); document.getElementById('syncText').innerText = 'Local Mode'; showToast('Disconnected'); renderAllViews(); }
+  
+  // Load local demo fallback
+  function loadDemoData() {
+    if(localState.people.length===0) localState.people = [{id:'p1',name:'Me',role:'Founder',type:'team'},{id:'p2',name:'Taha',role:'Partner',type:'team'},{id:'p3',name:'Antonis',role:'Partner',type:'team'}];
+    if(localState.transactions.length===0) {
+      localState.transactions = [
+        {id:'t1', month_key:'2026-03',type:'income',description:'Client A',amount:12500,category:'salary',date:'2026-03-15',payer_id:null},
+        {id:'t2', month_key:'2026-03',type:'expense',description:'AWS Credits',amount:3200,category:'software',date:'2026-03-10',payer_id:'p2'},
+        {id:'t3', month_key:'2026-04',type:'income',description:'Consulting',amount:8700,category:'other',date:'2026-04-05',payer_id:null}
+      ];
+    }
+    if(localState.owedEntries.length===0) localState.owedEntries = [{id:'o1',person_id:'p2',source:'AWS payment',amount:3200,date:'2026-03-10'}];
+    if(localState.investments.length===0) localState.investments = [{id:'i1',person_id:'p3',type:'investment',amount:25000,equity:5,date:'2026-01-01',notes:'pre-seed'}];
+    renderAllViews();
+  }
+  
+  function getPersonName(id) { let p = localState.people.find(x=>x.id===id); return p ? p.name : 'Unknown'; }
+  function getOwedTotal(personId) { return localState.owedEntries.filter(e=>e.person_id===personId).reduce((s,e)=>s+e.amount,0); }
+  function getTotalRevenue() { return localState.transactions.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0); }
+  function getTotalExpense() { return localState.transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0); }
+  function getNetProfit() { return getTotalRevenue() - getTotalExpense(); }
+  
+  function renderDashboard() {
+    const rev = getTotalRevenue(), exp = getTotalExpense(), profit = rev - exp;
+    let owedTotal = 0; localState.people.forEach(p=>{ owedTotal += getOwedTotal(p.id); });
+    document.getElementById('dashKpis').innerHTML = `
+      <div class="kpi revenue"><div class="kpi-label">Total Revenue</div><div class="kpi-value">${formatUSD(rev)}</div></div>
+      <div class="kpi expense"><div class="kpi-label">Total Expenses</div><div class="kpi-value">${formatUSD(exp)}</div></div>
+      <div class="kpi profit"><div class="kpi-label">Net Profit</div><div class="kpi-value">${formatUSD(profit)}</div></div>
+      <div class="kpi"><div class="kpi-label">Total Owed to Team</div><div class="kpi-value">${formatUSD(owedTotal)}</div></div>
+    `;
+    const monthMap = new Map();
+    localState.transactions.forEach(t => { let m = t.month_key; if(!m) return; if(!monthMap.has(m)) monthMap.set(m, {rev:0,exp:0}); let d = monthMap.get(m); if(t.type==='income') d.rev += t.amount; else d.exp += t.amount; });
+    const sortedMonths = [...monthMap.keys()].sort().slice(-6);
+    const revArr = [], expArr = [], labels = [];
+    sortedMonths.forEach(m => { labels.push(m); revArr.push(monthMap.get(m).rev); expArr.push(monthMap.get(m).exp); });
+    if(trendChart) trendChart.destroy();
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    trendChart = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Revenue', data: revArr, backgroundColor: '#10b981'},{ label: 'Expenses', data: expArr, backgroundColor: '#ef4444'}] }, options: { responsive: true, maintainAspectRatio: true } });
+    let owedHtml = ''; localState.people.forEach(p => { let bal = getOwedTotal(p.id); if(bal > 0) owedHtml += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding:8px 0"><span>${p.name}</span><span style="color:var(--warning)">${formatUSD(bal)}</span></div>`; });
+    document.getElementById('owedPreview').innerHTML = owedHtml || '<div>✨ No outstanding balances</div>';
+  }
+  
+  function renderPnL() {
+    const monthSelect = document.getElementById('pnlMonthSelect');
+    const monthsSet = [...new Set(localState.transactions.map(t=>t.month_key).filter(Boolean))].sort();
+    monthSelect.innerHTML = monthsSet.map(m=>`<option value="${m}">${m}</option>`).join('');
+    if(monthsSet.length===0) { document.getElementById('pnlTable').innerHTML = '<div>No data</div>'; return; }
+    const selected = monthSelect.value || monthsSet[0];
+    const monthTx = localState.transactions.filter(t=>t.month_key===selected);
+    const income = monthTx.filter(t=>t.type==='income');
+    const expenses = monthTx.filter(t=>t.type==='expense');
+    let incSum=0, expSum=0;
+    let html = `<h3>${selected} Summary</h3><table><thead><tr><th>Type</th><th>Description</th><th>Category</th><th>Amount</th></tr></thead><tbody>`;
+    income.forEach(i=>{ incSum+=i.amount; html+=`<tr><td>📥 Income</td><td>${i.description}</td><td>${i.category}</td><td class="amount-pos">${formatUSD(i.amount)}</td></tr>`; });
+    expenses.forEach(e=>{ expSum+=e.amount; html+=`<tr><td>📤 Expense</td><td>${e.description}</td><td>${e.category}</td><td class="amount-neg">${formatUSD(e.amount)}</td></tr>`; });
+    html+=`<tr style="border-top:2px solid var(--border);"><td colspan="3"><strong>Net Profit</strong></td><td><strong>${formatUSD(incSum-expSum)}</strong></td></tr></tbody></table>`;
+    document.getElementById('pnlTable').innerHTML = html;
+  }
+  
+  function renderPeopleHub() {
+    const container = document.getElementById('personTabsContainer');
+    if(!localState.people.length) { container.innerHTML = '<i>Add team members</i>'; return; }
+    container.innerHTML = localState.people.map(p => `<button class="person-tab ${currentPersonId===p.id ? 'active' : ''}" onclick="selectPerson('${p.id}')">👤 ${p.name}</button>`).join('');
+    if(!currentPersonId && localState.people.length) currentPersonId = localState.people[0].id;
+    if(currentPersonId) displayPersonDashboard(currentPersonId);
+  }
+  
+  function displayPersonDashboard(personId) {
+    const person = localState.people.find(p=>p.id===personId);
+    if(!person) return;
+    const personTx = localState.transactions.filter(t => t.payer_id === personId || (t.type==='expense' && t.payer_id===personId));
+    const expensesPaid = personTx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+    const owed = getOwedTotal(personId);
+    const investmentsGiven = localState.investments.filter(i=>i.person_id===personId && i.type==='investment').reduce((s,i)=>s+i.amount,0);
+    const html = `<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px;"><div class="kpi"><div class="kpi-label">Out-of-pocket paid</div><div class="kpi-value">${formatUSD(expensesPaid)}</div></div><div class="kpi"><div class="kpi-label">Owed by Company</div><div class="kpi-value" style="color:var(--warning)">${formatUSD(owed)}</div></div><div class="kpi"><div class="kpi-label">Invested</div><div class="kpi-value">${formatUSD(investmentsGiven)}</div></div></div>`;
+    document.getElementById('selectedPersonDashboard').innerHTML = html;
+    // per person monthly P&L chart
+    const monthMap = new Map();
+    localState.transactions.forEach(t => {
+      if(t.payer_id === personId || (t.type==='expense' && t.payer_id===personId)) {
+        let m = t.month_key; if(!m) return;
+        if(!monthMap.has(m)) monthMap.set(m,{inc:0,exp:0});
+        let val = monthMap.get(m);
+        if(t.type==='income') val.inc+=t.amount;
+        else val.exp+=t.amount;
+      }
+    });
+    const labels = [...monthMap.keys()].sort();
+    const netArr = labels.map(l => monthMap.get(l).inc - monthMap.get(l).exp);
+    if(personChart) personChart.destroy();
+    const ctx = document.getElementById('personPnLChart').getContext('2d');
+    personChart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ label: `${person.name} Monthly Net Contribution`, data: netArr, borderColor: '#3b82f6', fill: false, tension: 0.2 }] } });
+  }
+  
+  function selectPerson(id) { currentPersonId = id; renderPeopleHub(); }
+  
+  function renderInvestments() {
+    let totalInv = 0, totalRet = 0;
+    localState.investments.forEach(i=>{ if(i.type==='investment') totalInv+=i.amount; else totalRet+=i.amount; });
+    document.getElementById('investGrid').innerHTML = `<div class="kpi-grid"><div class="kpi"><div>💰 Total Raised</div><div class="kpi-value">${formatUSD(totalInv)}</div></div><div class="kpi"><div>📤 Returns</div><div class="kpi-value">${formatUSD(totalRet)}</div></div><div class="kpi"><div>📈 Net Equity</div><div class="kpi-value">${formatUSD(totalInv-totalRet)}</div></div></div>`;
+    let list = `<table><thead><tr><th>Investor</th><th>Type</th><th>Amount</th><th>Equity%</th><th>Date</th></tr></thead><tbody>`;
+    localState.investments.forEach(i=>{ list+=`<tr><td>${getPersonName(i.person_id)}</td><td>${i.type}</td><td class="${i.type==='investment'?'amount-pos':'amount-neg'}">${formatUSD(i.amount)}</td><td>${i.equity||0}%</td><td>${i.date}</td></tr>`; });
+    list+=`</tbody></table>`;
+    document.getElementById('investList').innerHTML = list;
+  }
+  async function addInvestment() {
+    let pid = document.getElementById('invPersonSelect').value;
+    let amount = parseFloat(document.getElementById('invAmount').value);
+    let type = document.getElementById('invType').value;
+    if(!pid || isNaN(amount)) { showToast('Invalid',true); return; }
+    const newInv = { id: crypto.randomUUID?.()||Date.now()+'', person_id: pid, type, amount, equity: type==='investment'?0:0, date: new Date().toISOString().slice(0,10), notes:'' };
+    localState.investments.push(newInv);
+    if(supabaseClient) await supabaseClient.from('investments').insert(newInv);
+    renderInvestments(); showToast('Investment recorded');
+  }
+  function renderBudget() { let html = `<div class="form-grid">`; Object.entries(localState.budgets).forEach(([cat,val])=>{ html+=`<label>${cat}</label><input type="number" id="budget_${cat}" value="${val}">`; }); html+=`</div>`; document.getElementById('budgetTable').innerHTML = html; }
+  function saveBudgets() { Object.keys(localState.budgets).forEach(cat=>{ let v = parseFloat(document.getElementById(`budget_${cat}`).value); if(!isNaN(v)) localState.budgets[cat]=v; }); showToast('Budgets saved'); renderAllViews(); }
+  function quickAddModal() { let desc = prompt('Description'); let amt = parseFloat(prompt('Amount')); let type = confirm('Income? (OK=Income, Cancel=Expense)') ? 'income' : 'expense'; if(desc && amt) { let monthKey = new Date().toISOString().slice(0,7); let tx = { id: Date.now()+'', month_key: monthKey, type, description: desc, amount: amt, category: 'other', date: new Date().toISOString().slice(0,10), payer_id: null }; localState.transactions.push(tx); if(supabaseClient) supabaseClient.from('transactions').insert(tx); renderAllViews(); showToast('Added'); } }
+  function exportPnlCSV() { let csv = 'Month,Type,Description,Amount\n'; localState.transactions.forEach(t=>{ csv+=`${t.month_key},${t.type},${t.description},${t.amount}\n`; }); let blob = new Blob([csv], {type:'text/csv'}); let a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='pnl_export.csv'; a.click(); }
+  function exportLocalData() { let dataStr = JSON.stringify(localState); let blob = new Blob([dataStr], {type:'application/json'}); let a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='biztrack_backup.json'; a.click(); }
+  function importData(input) { let file = input.files[0]; if(!file) return; let reader = new FileReader(); reader.onload = e => { try { let imp = JSON.parse(e.target.result); if(imp.people && imp.transactions) { localState = {...localState, ...imp}; renderAllViews(); showToast('Imported'); } else throw new Error(); } catch(err){ showToast('Invalid file',true); } }; reader.readAsText(file); }
+  
+  function renderAllViews() { renderDashboard(); renderPnL(); renderPeopleHub(); renderInvestments(); renderBudget(); if(currentPersonId) displayPersonDashboard(currentPersonId); if(trendChart) renderDashboard(); }
+  function showView(view) { document.querySelectorAll('.view').forEach(v=>v.classList.add('hidden')); document.getElementById(view+'View').classList.remove('hidden'); renderAllViews(); }
+  
+  // load saved supabase credentials
+  (function initLocal() {
+    let savedUrl = localStorage.getItem('sb_url'); let savedKey = localStorage.getItem('sb_key');
+    if(savedUrl && savedKey) { document.getElementById('supabaseUrlInput').value = savedUrl; document.getElementById('supabaseKeyInput').value = savedKey; initSupabaseConnection(); }
+    else loadDemoData();
+    renderAllViews();
+  })();
+  window.openAddPersonModal = () => { let name = prompt('Name'); let role = prompt('Role'); if(name){ let newId = crypto.randomUUID?.()||Date.now()+''; let newP = { id:newId, name, role, type:'team' }; localState.people.push(newP); if(supabaseClient) pushPerson(newP); renderPeopleHub(); } };
+</script>
+</body>
+</html>
